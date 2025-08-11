@@ -106,3 +106,59 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const [rows] = await db.execute('SELECT * FROM users WHERE email = ? AND is_active = true', [email]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No active account found with this email' });
+    }
+
+    const user = rows[0];
+
+    // Create reset token valid for 15 minutes
+    const resetToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: '15m' }
+    );
+
+    // TODO: Send resetToken via email (for now return it in response for testing)
+    res.json({ message: 'Password reset link generated', resetToken });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token and new password are required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'defaultsecret');
+
+    const hash = await bcrypt.hash(newPassword, 10);
+
+    await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [hash, decoded.id]);
+
+    res.json({ message: 'Password updated successfully' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
