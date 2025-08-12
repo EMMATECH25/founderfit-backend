@@ -11,7 +11,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3001', // for local frontend testing
+  origin: ['http://localhost:3001'
+         ,'http://localhost:3000'],
+   // for local frontend testing
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
