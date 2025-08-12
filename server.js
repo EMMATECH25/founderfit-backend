@@ -6,6 +6,8 @@ const db = require('./config/db');
 
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const formRoutes = require('./routes/form.routes');
+
 
 const app = express();
 
@@ -23,6 +25,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes); // ✅ Protected routes here
+app.use('/api/form', formRoutes);
+
 
 // Test DB connection
 db.getConnection()
