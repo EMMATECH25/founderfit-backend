@@ -3,6 +3,9 @@ const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 
 // 1. Create Checkout Session
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000"; // ✅ fallback for local
+
 exports.createCheckoutSession = async (req, res) => {
   const { email } = req.body;
 
@@ -15,15 +18,15 @@ exports.createCheckoutSession = async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: { name: "28-Day Challenge Access" },
-            unit_amount: 1999, // 💵 $19.99 (example, adjust to your price)
+            unit_amount: 1999, // 💵 $19.99
           },
           quantity: 1,
         },
       ],
       customer_email: email,
       metadata: { email },
-      success_url: `${process.env.FRONTEND_URL}/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-failed`,
+      success_url: `${FRONTEND_URL}/welcome?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${FRONTEND_URL}/payment-failed`,
     });
 
     res.json({ url: session.url });
@@ -32,6 +35,7 @@ exports.createCheckoutSession = async (req, res) => {
     res.status(500).json({ error: "Failed to create checkout session" });
   }
 };
+
 
 // 2. Webhook handler
 exports.handleWebhook = async (req, res) => {
