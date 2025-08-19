@@ -18,28 +18,32 @@ exports.signup = async (req, res) => {
   }
 
   try {
-    // Check if user already exists in pending_users
-    const [existing] = await db.execute('SELECT * FROM pending_users WHERE email = ?', [email]);
-    if (existing.length > 0) {
+    // Check if user already exists (in either users or pending_users)
+    const [existingUser] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+    const [existingPending] = await db.execute('SELECT * FROM pending_users WHERE email = ?', [email]);
+
+    if (existingUser.length > 0 || existingPending.length > 0) {
       return res.status(409).json({ error: 'Email already in use.' });
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const expiresAt = dayjs().add(48, 'hour').format('YYYY-MM-DD HH:mm:ss');
 
-    // Save to pending_users
+    // Save to pending_users (awaiting payment)
     await db.execute(
-      `INSERT INTO pending_users (first_name, last_name, email, password_hash, expires_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [firstName, lastName, email, hash, expiresAt]
+      `INSERT INTO pending_users (first_name, last_name, email, password_hash)
+       VALUES (?, ?, ?, ?)`,
+      [firstName, lastName, email, hash]
     );
 
-    res.status(201).json({ message: 'Signup successful. Please complete payment within 48 hours.' });
+    // ✅ Now just return simple success
+    res.status(201).json({ message: 'Signup successful' });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
 
 // ================= LOGIN =================
 exports.login = async (req, res) => {
