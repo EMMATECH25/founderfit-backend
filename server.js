@@ -13,9 +13,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3001'
-         ,'http://localhost:3000',
-        'https://founderfit.netlify.app'],
+  origin: [
+        'https://founderfit.netlify.app',
+      'https://illustrious-narwhal-8f5ff2.netlify.app'],
    // for local frontend testing
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
