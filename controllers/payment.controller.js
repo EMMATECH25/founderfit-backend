@@ -2,10 +2,10 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 
-// 1. Create Checkout Session
+// ✅ Fallback for local testing
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000"; // ✅ fallback for local
-
+// 1️⃣ Create Checkout Session
 exports.createCheckoutSession = async (req, res) => {
   const { email } = req.body;
 
@@ -29,23 +29,24 @@ exports.createCheckoutSession = async (req, res) => {
       cancel_url: `${FRONTEND_URL}/payment-failed`,
     });
 
+    console.log("✅ Checkout session created:", session.id);
     res.json({ url: session.url });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Failed to create checkout session:", err);
     res.status(500).json({ error: "Failed to create checkout session" });
   }
 };
 
-
-// 2. Webhook handler
+// 2️⃣ Webhook Handler
 exports.handleWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
-
   let event;
+
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    console.log("🔔 Webhook event received:", event.type);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err.message);
+    console.error("❌ Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -53,28 +54,30 @@ exports.handleWebhook = async (req, res) => {
     const session = event.data.object;
     const email = session.customer_email;
 
+    console.log("✅ Payment completed for session:", session.id);
+    console.log("📧 Email:", email);
+
     // Generate JWT token
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     try {
-      // Store token in DB
       await db.execute(
         "INSERT INTO payment_tokens (session_id, token) VALUES (?, ?)",
         [session.id, token]
       );
-
-      console.log(`✅ Payment successful for ${email}, token saved`);
+      console.log("🔐 Token generated and saved:", token);
     } catch (err) {
-      console.error("DB insert error:", err);
+      console.error("❌ DB insert error:", err);
     }
   }
 
   res.json({ received: true });
 };
 
-// 3. Get token
+// 3️⃣ Get Token by Session ID
 exports.getToken = async (req, res) => {
   const { sessionId } = req.params;
+
   try {
     const [rows] = await db.execute(
       "SELECT token FROM payment_tokens WHERE session_id = ?",
@@ -82,12 +85,14 @@ exports.getToken = async (req, res) => {
     );
 
     if (rows.length === 0) {
+      console.warn("⚠️ No token found for session:", sessionId);
       return res.status(404).json({ error: "No token found for session" });
     }
 
+    console.log("🔑 Token retrieved for session:", sessionId);
     res.json({ token: rows[0].token });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Server error while retrieving token:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
