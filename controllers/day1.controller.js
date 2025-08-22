@@ -1,13 +1,30 @@
 const db = require("../config/db");
 
 // Save Day1-Part1 form data
+// Save Day1-Part1 form data
 exports.saveSkillsPassions = async (req, res) => {
-  const userId = req.user.id; // ✅ from JWT middleware
-  const { skills, passions } = req.body;
+  const userId = req.user.id;
+  let { skills = [], passions = [] } = req.body;
 
-  // Must provide at least one skill or passion
-  if ((!skills || skills.length === 0) && (!passions || passions.length === 0)) {
-    return res.status(400).json({ error: "Please provide at least one skill or passion." });
+  // Filter: remove fully empty rows
+  skills = skills.filter(s => s.description?.trim() || s.score !== null);
+  passions = passions.filter(p => p.description?.trim() || p.score !== null);
+
+  // Validation: if description exists but score is missing → reject
+  for (let s of skills) {
+    if (s.description?.trim() && (s.score === null || s.score === undefined)) {
+      return res.status(400).json({ error: "Every skill must have a score (1–10)." });
+    }
+  }
+  for (let p of passions) {
+    if (p.description?.trim() && (p.score === null || p.score === undefined)) {
+      return res.status(400).json({ error: "Every passion must have a score (1–10)." });
+    }
+  }
+
+  // Must provide at least one valid skill or passion
+  if (skills.length === 0 && passions.length === 0) {
+    return res.status(400).json({ error: "Please provide at least one skill or passion with a score." });
   }
 
   try {
@@ -15,23 +32,19 @@ exports.saveSkillsPassions = async (req, res) => {
     await db.execute("DELETE FROM user_inputs WHERE user_id = ?", [userId]);
 
     // Insert new skills
-    if (skills && skills.length > 0) {
-      for (let s of skills) {
-        await db.execute(
-          "INSERT INTO user_inputs (user_id, type, description, score) VALUES (?, 'skill', ?, ?)",
-          [userId, s.description, s.score]
-        );
-      }
+    for (let s of skills) {
+      await db.execute(
+        "INSERT INTO user_inputs (user_id, type, description, score) VALUES (?, 'skill', ?, ?)",
+        [userId, s.description.trim(), s.score]
+      );
     }
 
     // Insert new passions
-    if (passions && passions.length > 0) {
-      for (let p of passions) {
-        await db.execute(
-          "INSERT INTO user_inputs (user_id, type, description, score) VALUES (?, 'passion', ?, ?)",
-          [userId, p.description, p.score]
-        );
-      }
+    for (let p of passions) {
+      await db.execute(
+        "INSERT INTO user_inputs (user_id, type, description, score) VALUES (?, 'passion', ?, ?)",
+        [userId, p.description.trim(), p.score]
+      );
     }
 
     res.json({ message: "✅ Skills and passions saved successfully." });
@@ -40,6 +53,7 @@ exports.saveSkillsPassions = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 // Fetch saved skills & passions (for Day1-Part2)
 exports.getSkillsPassions = async (req, res) => {
