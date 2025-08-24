@@ -38,6 +38,7 @@ exports.createCheckoutSession = async (req, res) => {
 };
 
 // 2️⃣ Webhook Handler
+// 2️⃣ Webhook Handler
 exports.handleWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
@@ -45,7 +46,11 @@ exports.handleWebhook = async (req, res) => {
   console.log("📥 Incoming webhook received");
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
     console.log("🔔 Webhook event verified:", event.type);
   } catch (err) {
     console.error("❌ Webhook signature verification failed:", err.message);
@@ -65,24 +70,54 @@ exports.handleWebhook = async (req, res) => {
       return res.status(400).json({ error: "Missing required data in session" });
     }
 
+    let userId;
+
+    try {
+      // Check if user already exists
+      const [users] = await db.execute("SELECT * FROM users WHERE email = ?", [
+        email,
+      ]);
+
+      if (users.length === 0) {
+        // New user → create + activate
+        const [result] = await db.execute(
+          "INSERT INTO users (email, is_active) VALUES (?, 1)",
+          [email]
+        );
+        userId = result.insertId;
+        console.log("👤 New user created with id:", userId);
+      } else {
+        // Existing user → ensure activated
+        userId = users[0].id;
+        await db.execute("UPDATE users SET is_active = 1 WHERE id = ?", [
+          userId,
+        ]);
+        console.log("🔄 Existing user re-activated with id:", userId);
+      }
+    } catch (err) {
+      console.error("❌ DB error while handling user:", err.message);
+      return res.status(500).json({ error: "User database error" });
+    }
+
     // Generate JWT token
     let token;
     try {
-      token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "7d" });
-      console.log("🔐 JWT token generated:", token);
+      token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+      console.log("🔐 JWT token generated for user:", userId);
     } catch (err) {
       console.error("❌ Failed to generate JWT token:", err.message);
       return res.status(500).json({ error: "Token generation failed" });
     }
 
-    // Attempt DB insert
+    // Store token with session
     try {
       console.log("📦 Attempting DB insert for session:", sessionId);
-      const [result] = await db.execute(
-        "INSERT INTO payment_tokens (session_id, token) VALUES (?, ?)",
+      await db.execute(
+        "INSERT INTO payment_tokens (session_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE token = VALUES(token)",
         [sessionId, token]
       );
-      console.log("✅ DB insert result:", result);
       console.log("🎉 Token successfully stored for session:", sessionId);
     } catch (err) {
       console.error("❌ DB insert error:", err.message);
@@ -94,6 +129,7 @@ exports.handleWebhook = async (req, res) => {
 
   res.json({ received: true });
 };
+
 
 // 3️⃣ Get Token by Session ID
 exports.getToken = async (req, res) => {
