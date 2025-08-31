@@ -8,6 +8,7 @@ const userRoutes = require("./routes/user.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const day1Routes = require("./routes/day1.routes");
 const day2Routes = require("./routes/day2.routes");
+const day3Routes = require("./routes/day3.routes");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/day1", day1Routes);
 app.use("/api", day2Routes);
+app.use("/api", day3Routes);
 
 // DB test
 db.getConnection()
