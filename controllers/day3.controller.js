@@ -48,6 +48,7 @@ exports.saveDay3 = async (req, res) => {
 };
 
 // ✅ Get Day3 responses
+// ✅ Get Day3 responses
 exports.getDay3 = async (req, res) => {
   const userId = req.user.id;
 
@@ -58,15 +59,20 @@ exports.getDay3 = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.json({ message: "No responses found yet", data: null });
+      return res.json({ message: "No responses found yet", data: [] });
     }
 
-    const response = rows[0];
-    response.ideas = JSON.parse(response.ideas);
+    let ideas = rows[0].ideas;
 
-    res.json({ data: response });
+    // Some MySQL drivers return JSON columns as objects already
+    if (typeof ideas === "string") {
+      ideas = JSON.parse(ideas);
+    }
+
+    res.json({ data: ideas }); // <-- return clean array directly
   } catch (err) {
     console.error("❌ Error fetching Day3 responses:", err.message);
     res.status(500).json({ error: "Server error while fetching Day3 responses" });
   }
 };
+
