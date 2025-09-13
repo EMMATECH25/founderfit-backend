@@ -78,6 +78,7 @@ exports.saveDay2 = async (req, res) => {
 };
 
 // ✅ Get Day2 responses
+// ✅ Get Day2 responses
 exports.getDay2 = async (req, res) => {
   const userId = req.user.id;
 
@@ -92,11 +93,30 @@ exports.getDay2 = async (req, res) => {
     }
 
     const response = rows[0];
-    response.selection_criteria = JSON.parse(response.selection_criteria);
+
+    // 🔒 Safe parse for selection_criteria
+    try {
+      response.selection_criteria = JSON.parse(response.selection_criteria);
+    } catch (e) {
+      console.warn(
+        "⚠️ Invalid JSON in selection_criteria, returning fallback:",
+        response.selection_criteria
+      );
+
+      // If it's a string, wrap it in an array, else fallback to empty array
+      if (typeof response.selection_criteria === "string") {
+        response.selection_criteria = [response.selection_criteria];
+      } else {
+        response.selection_criteria = [];
+      }
+    }
 
     res.json({ data: response });
   } catch (err) {
     console.error("❌ Error fetching Day2 responses:", err.message);
-    res.status(500).json({ error: "Server error while fetching Day2 responses" });
+    res
+      .status(500)
+      .json({ error: "Server error while fetching Day2 responses" });
   }
 };
+
