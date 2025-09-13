@@ -1,9 +1,10 @@
 const db = require("../config/db");
 
+
 // ✅ Save or update Day2 responses
 exports.saveDay2 = async (req, res) => {
   const userId = req.user.id; // from auth.middleware.js
-  const {
+  let {
     selection_criteria,
     location,
     scalability,
@@ -12,6 +13,12 @@ exports.saveDay2 = async (req, res) => {
   } = req.body;
 
   try {
+    // --- Normalize selection_criteria ---
+    if (typeof selection_criteria === "string") {
+      // If it's a comma-separated string, split it into array
+      selection_criteria = selection_criteria.split(",").map(s => s.trim());
+    }
+
     // --- Validation Rules ---
     if (!Array.isArray(selection_criteria) || selection_criteria.length !== 2) {
       return res
@@ -77,8 +84,9 @@ exports.saveDay2 = async (req, res) => {
   }
 };
 
-// ✅ Get Day2 responses
-// ✅ Get Day2 responses
+
+
+// ✅ Get Day2 responses (with cleanup)
 exports.getDay2 = async (req, res) => {
   const userId = req.user.id;
 
@@ -96,16 +104,26 @@ exports.getDay2 = async (req, res) => {
 
     // 🔒 Safe parse for selection_criteria
     try {
-      response.selection_criteria = JSON.parse(response.selection_criteria);
+      if (typeof response.selection_criteria === "string") {
+        // Attempt JSON parse first
+        response.selection_criteria = JSON.parse(response.selection_criteria);
+      }
+
+      // Ensure it's always an array
+      if (!Array.isArray(response.selection_criteria)) {
+        response.selection_criteria = [String(response.selection_criteria)];
+      }
     } catch (e) {
       console.warn(
-        "⚠️ Invalid JSON in selection_criteria, returning fallback:",
+        "⚠️ Invalid JSON in selection_criteria, cleaning up:",
         response.selection_criteria
       );
 
-      // If it's a string, wrap it in an array, else fallback to empty array
+      // Convert comma-separated string → array
       if (typeof response.selection_criteria === "string") {
-        response.selection_criteria = [response.selection_criteria];
+        response.selection_criteria = response.selection_criteria
+          .split(",")
+          .map((s) => s.trim());
       } else {
         response.selection_criteria = [];
       }
@@ -119,4 +137,6 @@ exports.getDay2 = async (req, res) => {
       .json({ error: "Server error while fetching Day2 responses" });
   }
 };
+
+
 
