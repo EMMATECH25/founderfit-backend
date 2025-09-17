@@ -1,6 +1,8 @@
+Got it 🚀 — here’s a final polished README.md with the improvements we discussed:
+
 # FounderFit Backend
 
-This is the backend service for the FounderFit application.  
+This is the backend service for the **FounderFit** application.  
 It provides APIs for user authentication, business idea evaluation, and progress tracking in the 28-day challenge.
 
 ---
@@ -25,15 +27,16 @@ Install dependencies:
 
 npm install
 
-Create a .env file in the root folder using the .env.example as reference:
+Create a .env file in the root folder using .env.example as reference:
 
 cp .env.example .env
 
 Fill in the actual values for your database and JWT secret inside .env.
 
 🗄️ Database Setup
+Create Schema
 
-Run this schema in your MySQL server:
+Run this schema in your MySQL server if starting fresh:
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -68,20 +71,27 @@ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-▶️ Running the server
+Restore from Backup (with sample data)
 
+If you want the existing data and not just empty tables, restore the included SQL dump:
+
+# Example (replace values with your DB credentials):
+
+mysql -u root -p -h localhost founderfit_db < db/founderfit_backup.sql
+
+Then update .env with your database credentials.
+
+▶️ Running the Server
 Development:
-
 npm run dev
 
 Production:
-
 npm start
 
-The server runs on http://localhost:10000 (or the PORT specified in .env).
+The server runs on http://localhost:10000
+(or the PORT specified in .env).
 
 🔑 API Endpoints
-
 Auth
 
 POST /api/auth/register
@@ -108,14 +118,12 @@ Upload this code or pull directly from GitHub.
 
 Configure environment variables from .env.example.
 
-Set up a MySQL database and run the schema.
+Set up a MySQL database and run the schema (or restore the backup).
 
-Start the app with:
+Start the app:
 
 npm start
 
 👨‍💻 Author
 
 Developed by Emmanuel (Backend Engineer)
-
----
